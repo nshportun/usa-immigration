@@ -2,13 +2,13 @@
 Fine-tune Llama 3.2 3B on the USA Immigration Law Q&A dataset via SageMaker JumpStart.
 
 Steps:
-1. Upload training/eval JSONL to S3 (Account 2 bucket or reuse Account 1)
+1. Upload training/eval JSONL to S3
 2. Launch SageMaker JumpStart fine-tuning job (Llama-3-2-3B-Instruct, LoRA)
 3. Wait for job completion
 4. Export model artifacts from S3
-5. Push to HuggingFace as nshportun/usa-immigration-llama-3.2-3b
+5. Push to HuggingFace as nshportun/usa-immigration-llama-3.2-3b-v3
 
-Cost estimate: ~$3-6 on ml.g5.2xlarge (~1-2 hours for 16K examples, 1 epoch)
+Cost estimate: ~$10-20 on ml.g5.2xlarge (~2-3 hours for 16K examples, 2 epochs)
 
 Run this script AFTER the dataset is published:
     python scripts/finetune/sagemaker_finetune.py
@@ -28,13 +28,13 @@ log = structlog.get_logger()
 
 BASE = pathlib.Path(__file__).resolve().parents[2]
 
-# ── AWS Account 2 credentials ─────────────────────────────────────────────────
-AWS_KEY    = os.getenv("ACCOUNT2_AWS_ACCESS_KEY_ID")
-AWS_SECRET = os.getenv("ACCOUNT2_AWS_SECRET_ACCESS_KEY")
-REGION     = "us-west-2"   # JumpStart Llama models available here
+# ── AWS credentials ────────────────────────────────────────────────────────────
+AWS_KEY    = os.getenv("AWS_ACCESS_KEY_ID")
+AWS_SECRET = os.getenv("AWS_SECRET_ACCESS_KEY")
+REGION     = os.getenv("SAGEMAKER_REGION", "us-west-2")   # JumpStart Llama available here
 
-# ── S3 (reuse Account 1 bucket) ────────────────────────────────────────────────
-S3_BUCKET  = os.getenv("S3_BUCKET", "usa-immigration-2026")
+# ── S3 ─────────────────────────────────────────────────────────────────────────
+S3_BUCKET  = os.getenv("SAGEMAKER_BUCKET", os.getenv("S3_BUCKET", "usa-immigration-finetune-2026"))
 S3_FT_PREFIX = "v1/finetune"
 
 # ── SageMaker settings ─────────────────────────────────────────────────────────
@@ -43,18 +43,18 @@ JS_MODEL_ID      = "meta-textgeneration-llama-3-2-3b-instruct"
 JS_MODEL_VERSION = "*"   # latest
 
 INSTANCE_TYPE    = "ml.g5.2xlarge"   # 24GB VRAM, ~$1.50/hr
-EPOCHS           = 1                  # 1 epoch ~ 1.5-2h on 16K examples
-BATCH_SIZE       = 4
+EPOCHS           = 2                  # 2 epochs ~ 2-3h on 16K examples
+BATCH_SIZE       = 2
 MAX_INPUT_LEN    = 1024
-LORA_R           = 8
-LEARNING_RATE    = 3e-4
+LORA_R           = 32                 # higher capacity for domain adaptation
+LEARNING_RATE    = 5e-5               # conservative: prevents catastrophic forgetting
 
 JOB_NAME = f"usa-immigration-llama32-3b-{int(time.time())}"
 
 # ── HuggingFace ────────────────────────────────────────────────────────────────
 HF_TOKEN         = os.getenv("HF_TOKEN")
 HF_USERNAME      = os.getenv("HF_USERNAME", "nshportun")
-HF_MODEL_REPO    = f"{HF_USERNAME}/usa-immigration-llama-3.2-3b"
+HF_MODEL_REPO    = os.getenv("HF_MODEL_REPO", f"{HF_USERNAME}/usa-immigration-llama-3.2-3b-v3")
 
 
 def get_sagemaker_role(iam_client) -> str:
@@ -138,14 +138,19 @@ def launch_finetune_job(sm_client, role_arn: str, train_uri: str, eval_uri: str)
     )
 
     estimator.set_hyperparameters(
-        instruction_tuned="True",
-        chat_dataset="True",
+        chat_dataset="True",                              # use chat template (not instruction_tuned — mutually exclusive)
+        chat_template="Llama3.1",
         epoch=str(EPOCHS),
         per_device_train_batch_size=str(BATCH_SIZE),
+        per_device_eval_batch_size=str(BATCH_SIZE),
         max_input_length=str(MAX_INPUT_LEN),
         lora_r=str(LORA_R),
+        lora_alpha=str(LORA_R * 2),                      # alpha = 2×r convention
+        lora_dropout="0.05",
+        target_modules="q_proj,v_proj,k_proj,o_proj",    # all attention projections
         learning_rate=str(LEARNING_RATE),
-        merge_weights="True",   # merge LoRA into base weights for easy export
+        merge_weights="True",                             # merge LoRA into base weights for export
+        seed="42",
     )
 
     estimator.fit(
@@ -181,7 +186,7 @@ def export_and_push_to_hf(sm_client, job_name: str):
     log.info("model_artifacts_uri", uri=model_uri)
 
     # Download
-    output_dir = BASE / "data_local" / "model_artifacts"
+    output_dir = BASE / "data_local" / "model_artifacts_v3"
     output_dir.mkdir(parents=True, exist_ok=True)
     model_tar = output_dir / "model.tar.gz"
 
@@ -244,10 +249,10 @@ with 17,058 source-grounded question-answer pairs covering all major U.S. immigr
 ## Training Details
 
 - **Base model**: meta-llama/Llama-3.2-3B-Instruct
-- **Fine-tuning method**: LoRA (r=8, merged into base weights)
+- **Fine-tuning method**: LoRA (r=32, all attention projections, merged into base weights)
 - **Training data**: 16,065 Q&A pairs (official USCIS, HF dataset, community)
 - **Eval data**: 993 stratified Q&A pairs
-- **Epochs**: 1
+- **Epochs**: 2  |  **Learning rate**: 5e-5
 - **Instance**: AWS SageMaker ml.g5.2xlarge
 
 ## Subdomains Covered
@@ -309,14 +314,13 @@ def main():
     load_dotenv()
 
     global AWS_KEY, AWS_SECRET
-    AWS_KEY    = os.getenv("ACCOUNT2_AWS_ACCESS_KEY_ID")
-    AWS_SECRET = os.getenv("ACCOUNT2_AWS_SECRET_ACCESS_KEY")
+    AWS_KEY    = os.getenv("AWS_ACCESS_KEY_ID")
+    AWS_SECRET = os.getenv("AWS_SECRET_ACCESS_KEY")
 
-    # S3 client (use Account 1 bucket for storage)
     s3_client = boto3.client("s3",
-        aws_access_key_id=os.getenv("ACCOUNT1_AWS_ACCESS_KEY_ID"),
-        aws_secret_access_key=os.getenv("ACCOUNT1_AWS_SECRET_ACCESS_KEY"),
-        region_name="us-east-1",
+        aws_access_key_id=AWS_KEY,
+        aws_secret_access_key=AWS_SECRET,
+        region_name=os.getenv("AWS_DEFAULT_REGION", "us-east-1"),
     )
     iam_client = boto3.client("iam",
         aws_access_key_id=AWS_KEY,

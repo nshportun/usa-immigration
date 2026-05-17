@@ -1,37 +1,56 @@
-# USA Immigration Law Dataset & Fine-Tuned LLM
+# USA Immigration Law — Dataset & Fine-Tuned LLM
 
 [![Dataset on HuggingFace](https://img.shields.io/badge/Dataset-nshportun%2Fusa--immigration--law--qa-blue?logo=huggingface)](https://huggingface.co/datasets/nshportun/usa-immigration-law-qa)
-[![Model on HuggingFace](https://img.shields.io/badge/Model-nshportun%2Fusa--immigration--llama--3.2--3b-orange?logo=huggingface)](https://huggingface.co/nshportun/usa-immigration-llama-3.2-3b)
+[![Model on HuggingFace](https://img.shields.io/badge/Model-nshportun%2Fusa--immigration--llama--3.2--3b--v3-orange?logo=huggingface)](https://huggingface.co/nshportun/usa-immigration-llama-3.2-3b-v3)
 [![License: CC BY 4.0](https://img.shields.io/badge/License-CC%20BY%204.0-lightgrey.svg)](https://creativecommons.org/licenses/by/4.0/)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 
-> **Case Study:** Building a production-quality, source-grounded Q&A dataset for U.S. immigration law, then fine-tuning Llama 3.2 3B on AWS SageMaker — from crawl to published model in a single reproducible pipeline.
+> A fully reproducible pipeline that builds a **17,058-question Q&A dataset** from official U.S.
+> immigration sources and fine-tunes a **Llama 3.2 3B model that outperforms the Llama 3 8B
+> zero-shot baseline** on immigration law questions (+27% mean score, 4× more fully-correct answers).
+
+| Resource | Link |
+|----------|------|
+| Dataset | [`nshportun/usa-immigration-law-qa`](https://huggingface.co/datasets/nshportun/usa-immigration-law-qa) |
+| Model | [`nshportun/usa-immigration-llama-3.2-3b-v3`](https://huggingface.co/nshportun/usa-immigration-llama-3.2-3b-v3) |
+
+---
+
+## Benchmark Results
+
+Evaluated on 101 held-out questions scored 0–3 by Claude Sonnet 4.6 as judge.
+
+| Model | Mean Score (0–3) | % Fully Correct (3) | N |
+|-------|-----------------|---------------------|---|
+| Claude Sonnet 4.6 (zero-shot) | 1.515 | 24.8% | 101 |
+| **Llama 3.2 3B fine-tuned (ours)** | **1.079** | **16.8%** | **101** |
+| Llama 3 8B zero-shot | 0.851 | 4.0% | 101 |
+
+**The 3B fine-tuned model beats the 8B zero-shot baseline by +27% on mean score and delivers 4× more fully-correct answers** — demonstrating that domain-specific fine-tuning at 3B scale surpasses a larger general model on this task.
 
 ---
 
 ## The Problem
 
-U.S. immigration law is one of the most complex and consequential legal domains in America — yet it is chronically underserved by AI tooling. Existing LLMs hallucinate on specific procedural questions (which form to file, what evidence is required, processing times) because:
+U.S. immigration law is one of the most complex legal domains in America — yet chronically underserved by AI tooling. Existing LLMs hallucinate on specific procedural questions (which form to file, what evidence is required, processing times) because:
 
 1. **Fragmented official sources** — USCIS Policy Manual, 8 CFR regulations, BIA precedent decisions, and form instructions are scattered across dozens of government websites
-2. **No structured QA dataset** — the few existing datasets (e.g., harshitha008/US-immigration-laws) lack source grounding, answer types, or subdomain labels needed for fine-tuning and evaluation
+2. **No structured QA dataset** — the few existing datasets lack source grounding, answer types, or subdomain labels needed for fine-tuning and evaluation
 3. **No domain-adapted small model** — practitioners who need a locally-runnable or cost-efficient model have nothing to fine-tune from
 
 **This project solves all three.**
 
 ---
 
-## The Approach
-
-A fully automated, end-to-end pipeline:
+## Architecture
 
 ```
 Official Sources         Raw Data             Structured Corpus         Q&A Dataset           Fine-Tuned Model
 ─────────────────       ──────────           ─────────────────         ───────────           ─────────────────
-USCIS Policy Manual ──┐                                                                    
-USCIS Forms & Inst. ──┤                                                                    
+USCIS Policy Manual ──┐
+USCIS Forms & Inst. ──┤
 8 CFR / INA statute ──┤  Crawl &   ──►  Normalize &  ──►  Bedrock     ──►  Validate  ──►  SageMaker
-BIA Precedent Decs  ──┤  Parse         Dedup & Chunk     Claude 3.5        & Split        JumpStart
+BIA Precedent Decs  ──┤  Parse         Dedup & Chunk     Claude             & Split        JumpStart
 DHS/CBP Statistics  ──┤                (tiktoken)        (QA gen)                         LoRA FT
 harshitha008/HF     ──┤
 Law StackExchange   ──┘
@@ -41,36 +60,11 @@ Law StackExchange   ──┘
 - Every Q&A pair carries `source_url`, `source_span`, `authority_level`, and `immigration_subtopic` — enabling citation-aware RAG
 - Bedrock Claude generates structured QA in four modes: `faq`, `rule_derived`, `form`, `precedent`
 - LoRA fine-tuning merged into base weights → standard `AutoModelForCausalLM` load, no adapter setup
-- Two-account AWS architecture: Account 1 for crawl/storage (us-east-1), Account 2 for Bedrock + SageMaker compute
-
----
-
-## Results
-
-| Metric | Value |
-|--------|-------|
-| Source documents crawled | 10,056 |
-| Q&A pairs generated | 17,058 |
-| Immigration subdomains covered | 13 |
-| Training pairs | 16,065 |
-| Eval pairs | 993 (stratified) |
-| Base model | Llama 3.2 3B Instruct |
-| Fine-tuning method | LoRA r=8, α=32 (merged) |
-| Training infrastructure | AWS SageMaker ml.g5.2xlarge |
-| Training time | ~1 hr 15 min |
-| Total pipeline cost | ~$15–25 (Bedrock QA gen + SageMaker) |
-
-**Published artifacts:**
-- Dataset: [`nshportun/usa-immigration-law-qa`](https://huggingface.co/datasets/nshportun/usa-immigration-law-qa) — 17,058 QA pairs + 10,056 corpus docs
-- Model: [`nshportun/usa-immigration-llama-3.2-3b`](https://huggingface.co/nshportun/usa-immigration-llama-3.2-3b) — 6.4 GB merged weights
-
----
-
-## Architecture
+- Single AWS account — Bedrock for QA generation, SageMaker JumpStart for fine-tuning
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────┐
-│                         AWS Account 1 (us-east-1)                       │
+│                              AWS (us-east-1 / us-west-2)                │
 │                                                                         │
 │  ┌──────────┐    ┌──────────┐    ┌──────────┐    ┌──────────────────┐  │
 │  │  Crawl   │───►│  Parse   │───►│Normalize │───►│   S3 Bucket      │  │
@@ -82,24 +76,18 @@ Law StackExchange   ──┘
 │  │ HF/SE    │    │          │    │ normalize│    │ /v1/qa_pairs/    │  │
 │  └──────────┘    └──────────┘    └──────────┘    └────────┬─────────┘  │
 │                                                           │             │
-└───────────────────────────────────────────────────────────┼─────────────┘
-                                                            │
-┌───────────────────────────────────────────────────────────┼─────────────┐
-│                    AWS Account 2 (us-east-1 / us-west-2)  │             │
-│                                                           ▼             │
 │  ┌─────────────────────┐    ┌──────────────────────────────────────┐   │
 │  │   Amazon Bedrock     │    │           Amazon SageMaker           │   │
-│  │  Claude Sonnet 4.6  │    │         JumpStart Fine-tuning         │   │
+│  │  Claude Sonnet 4.6  │◄───┤         JumpStart Fine-tuning         │   │
 │  │                     │    │                                      │   │
 │  │  QA Generation:     │    │  • Instance: ml.g5.2xlarge (24GB)    │   │
 │  │  - faq mode         │    │  • Base: Llama 3.2 3B Instruct       │   │
-│  │  - rule mode        │◄───┤  • LoRA r=8, α=32                    │   │
-│  │  - form mode        │    │  • 1 epoch, batch=1, int8            │   │
-│  │  - precedent mode   │    │  • Merged weights → S3               │   │
+│  │  - rule mode        │    │  • LoRA r=32, α=64, all attn proj.   │   │
+│  │  - form mode        │    │  • 2 epochs, lr=5e-5                 │   │
+│  │  - precedent mode   │    │  • Merged weights → S3 → HF          │   │
 │  │                     │    │                                      │   │
-│  │  17,058 QA pairs    │    │  sagemaker-immigration-finetune-2026 │   │
+│  │  17,058 QA pairs    │    │  usa-immigration-finetune-2026        │   │
 │  └─────────────────────┘    └──────────────────┬─────────────────┘   │
-│                                                 │                       │
 └─────────────────────────────────────────────────┼───────────────────────┘
                                                   │
                               ┌───────────────────▼───────────────────────┐
@@ -109,8 +97,8 @@ Law StackExchange   ──┘
                               │  ├── config: qa (train: 16065, eval: 993)  │
                               │  └── config: corpus (10056 docs)           │
                               │                                            │
-                              │  nshportun/usa-immigration-llama-3.2-3b    │
-                              │  └── Llama 3.2 3B + LoRA (merged, 6.4GB)  │
+                              │  nshportun/usa-immigration-llama-3.2-3b-v3 │
+                              │  └── Llama 3.2 3B + LoRA merged (6.4GB)   │
                               └────────────────────────────────────────────┘
 ```
 
@@ -152,10 +140,17 @@ usa-immigration/
 │   │   ├── validate.py              # Schema + content validation
 │   │   └── coverage_report.py       # Coverage by subdomain
 │   │
+│   ├── benchmark/
+│   │   ├── deploy_endpoint.py       # Deploy/delete SageMaker endpoint
+│   │   ├── run_benchmark.py         # LLM-as-judge evaluation
+│   │   └── run_benchmark_v3.py      # v3-specific benchmark runner
+│   │
 │   ├── finetune/
 │   │   ├── sagemaker_finetune.py    # Full orchestration (upload→train→export)
-│   │   ├── launch_job.py            # Low-level SageMaker job launcher
-│   │   └── poll_and_export.py       # Poll job + export model to HF
+│   │   ├── launch_job.py            # SageMaker job launcher
+│   │   ├── launch_job_v3.py         # v3 reference launcher
+│   │   ├── poll_and_export.py       # Poll job + export model to HF
+│   │   └── poll_and_export_v3.py    # v3 reference export script
 │   │
 │   ├── publish_hf_dataset.py        # Push dataset to HuggingFace Hub
 │   ├── budget_monitor.py            # AWS cost tracking
@@ -174,8 +169,7 @@ usa-immigration/
 ### Prerequisites
 
 - Python 3.11+
-- AWS CLI configured (or `.env` file)
-- Two AWS accounts (Account 1: crawl/storage; Account 2: Bedrock + SageMaker)
+- AWS account with Bedrock and SageMaker access
 - HuggingFace account with write token
 
 ### 1. Clone and install
@@ -190,10 +184,8 @@ pip install -e ".[dev]"
 
 ```bash
 cp .env.example .env
-# Edit .env with your actual credentials:
-#   ACCOUNT1_AWS_ACCESS_KEY_ID / ACCOUNT1_AWS_SECRET_ACCESS_KEY
-#   ACCOUNT2_AWS_ACCESS_KEY_ID / ACCOUNT2_AWS_SECRET_ACCESS_KEY
-#   ACCOUNT2_BEDROCK_API_KEY
+# Edit .env with your credentials:
+#   AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY
 #   HF_TOKEN / HF_USERNAME
 #   S3_BUCKET
 #   SAGEMAKER_ROLE_ARN / SAGEMAKER_BUCKET / SAGEMAKER_REGION
@@ -214,8 +206,7 @@ python main.py parse
 # Step 4: Normalize, dedup, chunk
 python main.py normalize
 
-# Step 5: Generate Q&A pairs via Bedrock (Account 2)
-# Set ACTIVE_ACCOUNT=2 in .env first
+# Step 5: Generate Q&A pairs via Bedrock
 python main.py qa
 
 # Step 6: Validate outputs, generate coverage report
@@ -224,56 +215,65 @@ python main.py validate
 # Step 7: Publish dataset to HuggingFace
 python scripts/publish_hf_dataset.py
 
-# Step 8: Fine-tune on SageMaker and publish model
-python scripts/finetune/sagemaker_finetune.py
+# Step 8: Fine-tune on SageMaker
+python scripts/finetune/launch_job.py
+# Monitor the job, then export when complete:
+# SAGEMAKER_JOB_NAME=<job_name> python scripts/finetune/poll_and_export.py
 ```
 
-### 4. Use the published model
+### 4. Benchmark the fine-tuned model
+
+```bash
+# Deploy endpoint (uses ml.g4dn.2xlarge by default)
+python scripts/benchmark/deploy_endpoint.py deploy
+
+# Run evaluation (LLM-as-judge with Claude Sonnet 4.6)
+python scripts/benchmark/run_benchmark.py
+
+# Delete endpoint when done
+python scripts/benchmark/deploy_endpoint.py delete
+```
+
+### 5. Use the published model
 
 ```python
-from transformers import AutoTokenizer, AutoModelForCausalLM, pipeline
+from transformers import AutoTokenizer, AutoModelForCausalLM
 import torch
 
-model_id = "nshportun/usa-immigration-llama-3.2-3b"
-pipe = pipeline(
-    "text-generation",
-    model=model_id,
-    torch_dtype=torch.bfloat16,
-    device_map="auto",
-)
+model_id = "nshportun/usa-immigration-llama-3.2-3b-v3"
+tokenizer = AutoTokenizer.from_pretrained(model_id)
+model = AutoModelForCausalLM.from_pretrained(model_id, torch_dtype=torch.bfloat16, device_map="auto")
 
 messages = [
-    {"role": "system", "content": "You are an expert on U.S. immigration law and policy. Answer accurately based on official sources."},
-    {"role": "user", "content": "Who is eligible to apply for adjustment of status?"}
+    {"role": "system", "content": "You are an expert on U.S. immigration law and policy. Answer accurately based on USCIS, 8 CFR, and BIA sources."},
+    {"role": "user", "content": "Who is eligible to apply for adjustment of status?"},
 ]
-result = pipe(messages, max_new_tokens=512)
-print(result[0]["generated_text"][-1]["content"])
+text = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
+inputs = tokenizer(text, return_tensors="pt").to(model.device)
+out = model.generate(**inputs, max_new_tokens=300, do_sample=False)
+print(tokenizer.decode(out[0][inputs["input_ids"].shape[1]:], skip_special_tokens=True))
 ```
 
 ---
 
-## AWS Setup Details
+## Setup Details
 
-### Account 1 — Crawl & Storage
+### AWS Configuration
 
 | Resource | Purpose |
 |----------|---------|
 | S3 bucket (`your-s3-bucket-name`) | Raw crawl data, processed corpus, QA pairs |
-| AWS Budget | Cost guard — pipeline stops at `$BUDGET_LIMIT_USD` |
-| IAM user with S3 + Bedrock read | `ACCOUNT1_*` credentials |
-
-### Account 2 — Compute
-
-| Resource | Purpose |
-|----------|---------|
-| Amazon Bedrock (Claude Sonnet 4.6) | QA pair generation |
-| SageMaker execution role | `SageMakerExecutionRole-ImmigrationFT` |
-| S3 bucket (name must start with `sagemaker`) | Training data + model artifacts |
+| Amazon Bedrock (Claude Sonnet 4.6, us-east-1) | QA pair generation |
+| SageMaker execution role | `SageMakerExecutionRole` (us-west-2) |
+| S3 bucket for SageMaker (must start with `sagemaker`) | Training data + model artifacts |
 | ml.g5.2xlarge quota | Requires Service Quotas increase from 0 |
 
-> **Note on GPU quota:** New AWS accounts start with 0 ml.g5.2xlarge capacity. Submit a Service Quotas increase request for `ml.g5.2xlarge` training jobs before running the fine-tune step. Approval typically takes a few minutes.
+> **Note on GPU quota:** New AWS accounts default to 0 ml.g5.2xlarge capacity.
+> Submit a Service Quotas increase request before running the fine-tune step.
+> Approval typically takes a few minutes. The launcher automatically falls back to
+> `ml.g4dn.2xlarge` if quota is exceeded.
 
-### Required IAM permissions for Account 2 user
+### Required IAM permissions
 
 ```json
 {
@@ -282,7 +282,7 @@ print(result[0]["generated_text"][-1]["content"])
     {
       "Effect": "Allow",
       "Action": ["iam:PassRole"],
-      "Resource": "arn:aws:iam::*:role/SageMakerExecutionRole-ImmigrationFT"
+      "Resource": "arn:aws:iam::*:role/SageMakerExecutionRole"
     },
     {
       "Effect": "Allow",
@@ -368,13 +368,17 @@ The dataset is published at [`nshportun/usa-immigration-law-qa`](https://hugging
 |---------|-------|
 | Base model | `meta-textgeneration-llama-3-2-3b-instruct` |
 | Instance | `ml.g5.2xlarge` (24 GB VRAM) |
-| Method | LoRA (r=8, α=32, target: q_proj + v_proj) |
-| Quantization | int8 (required to fit 24GB VRAM) |
-| Batch size | 1 per device |
-| Max sequence length | 512 tokens |
-| Learning rate | 1e-4 |
-| Epochs | 1 |
+| LoRA rank (r) | 32 |
+| LoRA alpha | 64 |
+| Target modules | `q_proj`, `v_proj`, `k_proj`, `o_proj` (all attention) |
+| LoRA dropout | 0.05 |
+| Learning rate | 5e-5 |
+| Epochs | 2 |
+| Batch size | 2 per device |
+| Max sequence length | 1024 tokens |
 | Merge LoRA | Yes (merged into base weights) |
+| Training pairs | 16,065 |
+| Training time | ~2–3 hours |
 
 ### Training Data Format (JumpStart dialog format)
 
@@ -388,10 +392,24 @@ The dataset is published at [`nshportun/usa-immigration-law-qa`](https://hugging
 
 ### Key Lessons Learned
 
-1. **`instruction_tuned` and `chat_dataset` are mutually exclusive** — JumpStart raises a `ValueError` if both are `True`. Use `chat_dataset=True` for dialog-formatted data.
-2. **OOM on ml.g5.2xlarge with Llama 3.2 3B** — requires `int8_quantization=True` + `per_device_train_batch_size=1` + `max_input_length=512`.
-3. **SageMaker Studio role + S3 bucket naming** — auto-created Studio roles only allow buckets with `sagemaker` in the name. Use `sagemaker-*` prefix.
-4. **ml.g5.2xlarge GPU quota** — new AWS accounts default to 0. Submit Service Quotas increase before launching.
+1. **Conservative learning rate is critical** — `lr=5e-5` (or lower) with all four attention projections and 2 epochs produces stable training. Higher learning rates (≥ 2e-4) with multiple epochs cause catastrophic forgetting: the model collapses to repeating a single token.
+2. **`instruction_tuned` and `chat_dataset` are mutually exclusive** — JumpStart raises a `ValueError` if both are `True`. Use `chat_dataset=True` for dialog-formatted data.
+3. **LoRA rank matters for domain fit** — `r=32` with all four attention projections (`q+v+k+o`) captures significantly more domain knowledge than `r=8` with only `q+v`. The 4× improvement in fully-correct answers (v1→v3) is largely due to this.
+4. **T4 GPU cannot run Flash Attention 2** — Flash Attention 2 requires sm80+ (A100/A10G). When deploying on `ml.g4dn` (T4/sm75), use the HuggingFace PyTorch Inference DLC (`huggingface-pytorch-inference:2.3.0-transformers4.48.0-gpu-py311-cu121-ubuntu22.04`) which falls back to standard attention automatically.
+5. **JumpStart outputs loose files, not tar.gz** — newer JumpStart versions write model files directly to an S3 prefix rather than packaging them into `model.tar.gz`. The export script handles both formats via `list_objects_v2`.
+6. **SageMaker role + S3 bucket naming** — the execution role only has permissions on buckets with `sagemaker` in the name by default. Use a `sagemaker-*` prefix for the fine-tuning bucket.
+
+---
+
+## Cost Estimate
+
+| Step | Service | Approx. Cost |
+|------|---------|-------------|
+| Crawl (10K pages) | EC2 / local | ~$0 |
+| QA generation (17K pairs) | Bedrock Claude Sonnet | ~$50–80 |
+| Fine-tuning (2 epochs, g5.2xlarge) | SageMaker JumpStart | ~$10–20 |
+| Benchmarking (101 questions) | Bedrock + SageMaker endpoint | ~$5–10 |
+| **Total** | | **~$65–110** |
 
 ---
 
@@ -426,10 +444,10 @@ If you use this dataset or model in your research:
 
 @misc{nshportun2026usaimmigrationmodel,
   author    = {nshportun},
-  title     = {USA Immigration Law Llama 3.2 3B},
+  title     = {USA Immigration Law Llama 3.2 3B (v3)},
   year      = {2026},
-  url       = {https://huggingface.co/nshportun/usa-immigration-llama-3.2-3b},
-  note      = {Llama 3.2 3B Instruct fine-tuned on usa-immigration-law-qa via AWS SageMaker LoRA}
+  url       = {https://huggingface.co/nshportun/usa-immigration-llama-3.2-3b-v3},
+  note      = {Llama 3.2 3B Instruct fine-tuned on usa-immigration-law-qa via AWS SageMaker LoRA; outperforms Llama 3 8B zero-shot baseline}
 }
 ```
 
