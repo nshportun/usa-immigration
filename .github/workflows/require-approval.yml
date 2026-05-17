@@ -1,0 +1,45 @@
+name: Require Owner Approval
+
+# Runs on every PR targeting main (or any branch).
+# Blocks the PR from being merged until natebell510 approves.
+# This is a status-check companion to CODEOWNERS + branch protection.
+
+on:
+  pull_request:
+    branches: ["**"]
+  pull_request_review:
+    types: [submitted, dismissed]
+
+jobs:
+  check-approval:
+    name: Owner approval required
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check for owner approval
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const OWNER = 'natebell510';
+            const { data: reviews } = await github.rest.pulls.listReviews({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.payload.pull_request
+                ? context.payload.pull_request.number
+                : context.payload.review.pull_request_url.split('/').pop(),
+            });
+
+            // Find the most recent review state from the owner
+            const ownerReviews = reviews
+              .filter(r => r.user.login === OWNER)
+              .sort((a, b) => new Date(b.submitted_at) - new Date(a.submitted_at));
+
+            if (ownerReviews.length === 0) {
+              core.setFailed(`PR requires approval from @${OWNER} before it can be merged.`);
+            } else if (ownerReviews[0].state !== 'APPROVED') {
+              core.setFailed(
+                `@${OWNER} has not approved this PR (current state: ${ownerReviews[0].state}).`
+              );
+            } else {
+              core.info(`Approved by @${OWNER}. Good to merge.`);
+            }
