@@ -1,0 +1,149 @@
+{
+  "sources": [
+    {
+      "source_id": "uscis-policy-manual",
+      "source_name": "USCIS Policy Manual",
+      "source_type": "official_policy",
+      "agency": "USCIS",
+      "authority_level": "primary_official",
+      "root_url": "https://www.uscis.gov/policy-manual",
+      "license": "public_domain_us_government",
+      "priority": 1,
+      "data_class": "policy"
+    },
+    {
+      "source_id": "uscis-forms",
+      "source_name": "USCIS Forms and Instructions",
+      "source_type": "official_form",
+      "agency": "USCIS",
+      "authority_level": "primary_official",
+      "root_url": "https://www.uscis.gov/forms",
+      "forms": ["I-130","I-485","I-765","I-131","I-140","N-400","I-589","I-90","I-864","I-129"],
+      "license": "public_domain_us_government",
+      "priority": 2,
+      "data_class": "procedure"
+    },
+    {
+      "source_id": "uscis-faqs",
+      "source_name": "USCIS FAQs and myUSCIS Help",
+      "source_type": "official_faq",
+      "agency": "USCIS",
+      "authority_level": "primary_official",
+      "root_url": "https://www.uscis.gov",
+      "license": "public_domain_us_government",
+      "priority": 3,
+      "data_class": "policy"
+    },
+    {
+      "source_id": "ina",
+      "source_name": "Immigration and Nationality Act (INA)",
+      "source_type": "statute",
+      "agency": "Congress",
+      "authority_level": "primary_official",
+      "root_url": "https://www.law.cornell.edu/uscode/text/8",
+      "license": "public_domain_us_government",
+      "priority": 4,
+      "data_class": "law"
+    },
+    {
+      "source_id": "8cfr",
+      "source_name": "Title 8 Code of Federal Regulations",
+      "source_type": "regulation",
+      "agency": "DHS",
+      "authority_level": "primary_official",
+      "root_url": "https://www.ecfr.gov/current/title-8",
+      "license": "public_domain_us_government",
+      "priority": 4,
+      "data_class": "law"
+    },
+    {
+      "source_id": "eoir-bia",
+      "source_name": "BIA Precedent Decisions",
+      "source_type": "case_law",
+      "agency": "EOIR",
+      "authority_level": "primary_official",
+      "root_url": "https://www.justice.gov/eoir/board-of-immigration-appeals-decisions",
+      "license": "public_domain_us_government",
+      "priority": 5,
+      "data_class": "law",
+      "decision_types": ["binding_precedent", "non_precedential"]
+    },
+    {
+      "source_id": "eoir-ag",
+      "source_name": "Attorney General Decisions",
+      "source_type": "case_law",
+      "agency": "DOJ",
+      "authority_level": "primary_official",
+      "root_url": "https://www.justice.gov/eoir/ag-decisions",
+      "license": "public_domain_us_government",
+      "priority": 5,
+      "data_class": "law"
+    },
+    {
+      "source_id": "dhs-yearbook",
+      "source_name": "DHS Yearbook of Immigration Statistics",
+      "source_type": "statistics",
+      "agency": "DHS",
+      "authority_level": "primary_official",
+      "root_url": "https://www.dhs.gov/immigration-statistics/yearbook",
+      "license": "public_domain_us_government",
+      "priority": 6,
+      "data_class": "statistics"
+    },
+    {
+      "source_id": "cbp-stats",
+      "source_name": "CBP Border Encounter Data",
+      "source_type": "statistics",
+      "agency": "CBP",
+      "authority_level": "primary_official",
+      "root_url": "https://www.cbp.gov/newsroom/stats",
+      "license": "public_domain_us_government",
+      "priority": 6,
+      "data_class": "statistics"
+    },
+    {
+      "source_id": "openimmigration",
+      "source_name": "OpenImmigration.us",
+      "source_type": "open_repository",
+      "agency": "openimmigration",
+      "authority_level": "secondary_reputable",
+      "root_url": "https://openimmigration.us",
+      "license": "open_data",
+      "priority": 7,
+      "data_class": "statistics"
+    },
+    {
+      "source_id": "pile-of-law",
+      "source_name": "Pile of Law (Hugging Face)",
+      "source_type": "open_repository",
+      "agency": "huggingface",
+      "authority_level": "secondary_reputable",
+      "root_url": "https://huggingface.co/datasets/pile-of-law/pile-of-law",
+      "license": "cc_by_4.0",
+      "priority": 7,
+      "data_class": "law"
+    },
+    {
+      "source_id": "law-stackexchange",
+      "source_name": "Law Stack Exchange",
+      "source_type": "community",
+      "agency": "stackexchange",
+      "authority_level": "community_non_authoritative",
+      "root_url": "https://law.stackexchange.com",
+      "license": "cc_by_sa_4.0",
+      "priority": 8,
+      "data_class": "community"
+    },
+    {
+      "source_id": "visajourney",
+      "source_name": "VisaJourney Forums",
+      "source_type": "community",
+      "agency": "community",
+      "authority_level": "community_non_authoritative",
+      "root_url": "https://www.visajourney.com/forums",
+      "license": "terms_permitting",
+      "priority": 8,
+      "data_class": "community"
+    }
+  ]
+}

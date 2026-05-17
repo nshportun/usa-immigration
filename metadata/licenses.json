@@ -1,0 +1,40 @@
+{
+  "licenses": {
+    "public_domain_us_government": {
+      "name": "U.S. Government Works (Public Domain)",
+      "description": "Works produced by U.S. federal government employees as part of their official duties are not subject to copyright under 17 U.S.C. § 105.",
+      "url": "https://www.usa.gov/government-works",
+      "commercial_use": true,
+      "attribution_required": false,
+      "share_alike": false
+    },
+    "open_data": {
+      "name": "Open Data (site-specific terms)",
+      "description": "Openly published data with no explicit license. Check source site terms.",
+      "commercial_use": "check_source",
+      "attribution_required": true,
+      "share_alike": false
+    },
+    "cc_by_4.0": {
+      "name": "Creative Commons Attribution 4.0 International",
+      "url": "https://creativecommons.org/licenses/by/4.0/",
+      "commercial_use": true,
+      "attribution_required": true,
+      "share_alike": false
+    },
+    "cc_by_sa_4.0": {
+      "name": "Creative Commons Attribution-ShareAlike 4.0",
+      "url": "https://creativecommons.org/licenses/by-sa/4.0/",
+      "commercial_use": true,
+      "attribution_required": true,
+      "share_alike": true
+    },
+    "terms_permitting": {
+      "name": "Site Terms — Permitting Non-Commercial Research",
+      "description": "Usage subject to site terms of service. Verify current terms before redistribution.",
+      "commercial_use": false,
+      "attribution_required": true,
+      "share_alike": false
+    }
+  }
+}
