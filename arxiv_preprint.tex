@@ -20,8 +20,8 @@
 \usepackage{enumitem}
 \usepackage{amsmath}
 \usepackage{amssymb}
-\usepackage{microtype}      % Improves line breaking and spacing
-\usepackage{breakurl}       % Better URL breaking
+\usepackage{microtype}
+\usepackage{xurl}
 
 \lstset{
   basicstyle=\ttfamily\small,
@@ -41,7 +41,7 @@
   \maketitle
 
   \begin{abstract}
-    This paper describes an end-to-end pipeline for constructing a large-scale, source-grounded question-answering dataset covering U.S. immigration law, and for fine-tuning a small language model on that dataset. Starting from official U.S. government sources -- including the USCIS Policy Manual, federal regulations (8 CFR), BIA precedent decisions, and immigration statistics -- I crawl, parse, normalize, and chunk 10,056 canonical documents. Using Amazon Bedrock (Claude Sonnet 4.6), I generate 17,058 structured Q\&A pairs across 13 immigration subdomains, each annotated with source provenance, authority level, answer type, and immigration subtopic. I then fine-tune Meta's Llama 3.2 3B Instruct model via AWS SageMaker JumpStart using parameter-efficient LoRA, merge the adapters into the base weights, and publish both the dataset and model to Hugging Face. The complete pipeline -- from first crawl to published model -- runs end-to-end on commodity cloud infrastructure for approximately \$15--25 in total compute cost. All artifacts are publicly available at \url{https://github.com/nshportun/usa-immigration}.
+    This paper describes an end-to-end pipeline for constructing a large-scale, source-grounded question-answering dataset covering U.S. immigration law, and for fine-tuning a small language model on that dataset. Starting from official U.S. government sources -- including the USCIS Policy Manual, federal regulations (8 CFR), BIA precedent decisions, and immigration statistics -- I crawl, parse, normalize, and chunk 10,056 canonical documents. Using Amazon Bedrock (Claude Sonnet 4.6), I generate 17,058 structured Q\&A pairs across 13 immigration subdomains, each annotated with source provenance, authority level, answer type, and immigration subtopic. I then fine-tune Meta's Llama 3.2 3B Instruct model via AWS SageMaker JumpStart using parameter-efficient LoRA, merge the adapters into the base weights, and publish both the dataset and model to Hugging Face. The complete pipeline -- from first crawl to published model -- runs end-to-end on commodity cloud infrastructure for approximately \$25 in total compute cost. All artifacts are publicly available at \url{https://github.com/natebell510/usa-immigration}.
   \end{abstract}
 
   \section{Introduction}
@@ -91,7 +91,9 @@
   \end{table}
 
   \subsection{Crawling}
-  Each source tier has a dedicated crawler in \texttt{scripts/crawl/}. All crawlers respect \texttt{robots.txt}, enforce a configurable delay (\texttt{CRAWL\_DELAY\_SECONDS=1.5}), and identify themselves with a descriptive user-agent string. Raw content is stored in S3 under a structured prefix (\texttt{v1/raw/\{source\}/\{doc\_id\}}).
+  Each source tier has a dedicated crawler in \texttt{scripts/crawl/}. All crawlers respect \texttt{robots.txt}, enforce a configurable delay (\texttt{CRAWL\_DELAY\_SECONDS=1.5}), and identify themselves with a descriptive user-agent string.
+
+  Raw content is stored in S3 under a structured prefix \texttt{v1/raw/\{source\}/\{doc\_id\}}.
 
   \subsection{Parsing and Normalization}
   Raw files pass through format-specific parsers that extract clean text, then through a normalization layer that assigns a canonical \texttt{doc\_id}, attaches metadata, deduplicates, and chunks documents into 512-token windows with 64-token overlap. The output is a 10,056-document corpus stored in \texttt{canonical\_corpus\_validated.jsonl}.
