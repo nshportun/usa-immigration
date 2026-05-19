@@ -3,9 +3,15 @@
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
 \usepackage{geometry}
-\geometry{a4paper, margin=1in}
+\geometry{a4paper, margin=1.05in}
 \usepackage{hyperref}
-\hypersetup{colorlinks=true, linkcolor=blue, citecolor=blue, urlcolor=blue}
+\hypersetup{
+  colorlinks=true,
+  linkcolor=blue,
+  citecolor=blue,
+  urlcolor=blue,
+  breaklinks=true
+}
 \usepackage{times}
 \usepackage{natbib}
 \usepackage{booktabs}
@@ -14,6 +20,8 @@
 \usepackage{enumitem}
 \usepackage{amsmath}
 \usepackage{amssymb}
+\usepackage{microtype}      % Improves line breaking and spacing
+\usepackage{breakurl}       % Better URL breaking
 
 \lstset{
   basicstyle=\ttfamily\small,
@@ -33,7 +41,7 @@
   \maketitle
 
   \begin{abstract}
-    This paper describes an end-to-end pipeline for constructing a large-scale, source-grounded question-answering dataset covering U.S. immigration law, and for fine-tuning a small language model on that dataset. Starting from official U.S. government sources -- including the USCIS Policy Manual, federal regulations (8 CFR), BIA precedent decisions, and immigration statistics -- I crawl, parse, normalize, and chunk 10,056 canonical documents. Using Amazon Bedrock (Claude Sonnet 4.6), I generate 17,058 structured Q\&A pairs across 13 immigration subdomains, each annotated with source provenance, authority level, answer type, and immigration subtopic. I then fine-tune Meta's Llama 3.2 3B Instruct model via AWS SageMaker JumpStart using parameter-efficient LoRA, merge the adapters into the base weights, and publish both the dataset and model to HuggingFace. The complete pipeline -- from first crawl to published model -- runs end-to-end on commodity cloud infrastructure for approximately \$15--25 in total compute cost. All artifacts are publicly available at \url{https://github.com/nshportun/usa-immigration}.
+    This paper describes an end-to-end pipeline for constructing a large-scale, source-grounded question-answering dataset covering U.S. immigration law, and for fine-tuning a small language model on that dataset. Starting from official U.S. government sources -- including the USCIS Policy Manual, federal regulations (8 CFR), BIA precedent decisions, and immigration statistics -- I crawl, parse, normalize, and chunk 10,056 canonical documents. Using Amazon Bedrock (Claude Sonnet 4.6), I generate 17,058 structured Q\&A pairs across 13 immigration subdomains, each annotated with source provenance, authority level, answer type, and immigration subtopic. I then fine-tune Meta's Llama 3.2 3B Instruct model via AWS SageMaker JumpStart using parameter-efficient LoRA, merge the adapters into the base weights, and publish both the dataset and model to Hugging Face. The complete pipeline -- from first crawl to published model -- runs end-to-end on commodity cloud infrastructure for approximately \$15--25 in total compute cost. All artifacts are publicly available at \url{https://github.com/nshportun/usa-immigration}.
   \end{abstract}
 
   \section{Introduction}
@@ -41,9 +49,7 @@
 
   U.S. immigration law is one of the most consequential legal domains for millions of people each year. Whether navigating visa applications, naturalization procedures, asylum claims, or removal proceedings, individuals often face these processes without legal representation. Large language models have the potential to make this kind of information more accessible, but general-purpose models struggle with domain-specific procedural questions. They get form numbers wrong, misstate filing deadlines, and confuse similar-sounding immigration categories.
 
-  The core issue is one of representation: immigration law is well documented in official government sources, but it is underrepresented in the training data used for most LLMs. The USCIS Policy Manual runs to thousands of pages. The Code of Federal Regulations Title 8 contains hundreds of sections. The Board of Immigration Appeals has issued over 28,000 precedent decisions. None of this material is adequately reflected in existing public datasets for LLM training.
-
-  This paper describes the construction of a new dataset, available as \texttt{nshportun/usa-immigration-law-qa} on HuggingFace, containing 17,058 source-grounded Q\&A pairs. It also describes the fine-tuning of a Llama 3.2 3B model, available as \texttt{nshportun/usa-immigration-llama-3.2-3b}, adapted for immigration law Q\&A. Both are released under permissive open licenses.
+  The core issue is one of representation: immigration law is well documented in official government sources, but it is underrepresented in the training data used for most LLMs. This paper describes the construction of a new dataset, available as \url{https://huggingface.co/datasets/nshportun/usa-immigration-law-qa} on Hugging Face, containing 17,058 source-grounded Q\&A pairs. It also describes the fine-tuning of a Llama 3.2 3B model, available as \url{https://huggingface.co/nshportun/usa-immigration-llama-3.2-3b-v3}.
 
   \section{Related Work}
   \label{sec:related_work}
@@ -51,7 +57,7 @@
   I review three lines of related work: immigration legal datasets, legal domain fine-tuning, and parameter-efficient adaptation methods.
 
   \paragraph{Immigration legal datasets.}
-  Publicly available immigration Q\&A datasets remain sparse. The \texttt{harshitha008/US-immigration-laws} collection on HuggingFace (Apache 2.0) provides approximately 8,900 QA pairs derived from scraped immigration law pages, but lacks source URLs, authority-level annotations, or subdomain labels. Law StackExchange hosts community Q\&A under an immigration tag, but the content is noisy and largely unsourced. No existing dataset covers the full range of official USCIS sources with structured provenance metadata.
+  Publicly available immigration Q\&A datasets remain sparse. The \texttt{harshitha008/US-immigration-laws} collection on Hugging Face (Apache 2.0) provides approximately 8,900 QA pairs derived from scraped immigration law pages, but lacks source URLs, authority-level annotations, or subdomain labels. Law StackExchange hosts community Q\&A under an immigration tag, but the content is noisy and largely unsourced.
 
   \paragraph{Legal QA and fine-tuning.}
   LegalBench~\citep{guha2023legalbench} benchmarks LLMs on legal reasoning tasks but does not include a U.S. immigration-specific split. Prior work on legal domain fine-tuning (e.g., LexGPT, LawInstruct) has focused primarily on case law and contract analysis, not immigration procedure.
@@ -71,86 +77,39 @@
     \label{tab:sources}
     \begin{tabular}{lllc}
       \toprule
-      Tier \& Source \& Authority \& Records \\
+      Tier & Source & Authority & Records \\
       \midrule
-      1 \& USCIS Policy Manual \& primary\_official \& \$\sim\$3,200 pages \\
-      2 \& USCIS Forms \& Instructions \& primary\_official \& 87 forms \\
-      3 \& 8 CFR / INA \& primary\_official \& Title 8, parts 1--1400 \\
-      4 \& BIA Precedent Decisions \& primary\_official \& Selected precedents \\
-      5 \& DHS/CBP Yearbook Statistics \& primary\_official \& Annual tables \\
-      6 \& harshitha008/US-immigration-laws \& secondary\_reputable \& 8,897 QA pairs \\
-      7 \& Law StackExchange \& community \& Curated threads \\
+      1 & USCIS Policy Manual & primary\_official & $\sim$3,200 pages \\
+      2 & USCIS Forms \& Instructions & primary\_official & 87 forms \\
+      3 & 8 CFR / INA & primary\_official & Title 8, parts 1--1400 \\
+      4 & BIA Precedent Decisions & primary\_official & Selected precedents \\
+      5 & DHS/CBP Yearbook Statistics & primary\_official & Annual tables \\
+      6 & harshitha008/US-immigration-laws & secondary\_reputable & 8,897 QA pairs \\
+      7 & Law StackExchange & community & Curated threads \\
       \bottomrule
     \end{tabular}
   \end{table}
 
   \subsection{Crawling}
-  Each source tier has a dedicated crawler in \texttt{scripts/crawl/}. All crawlers respect \texttt{robots.txt}, enforce a configurable delay (\texttt{CRAWL\_DELAY\_SECONDS=1.5}), and identify themselves with a descriptive user-agent string. Raw content is stored in S3 under a structured prefix (\texttt{v1/raw/\{source\}/\{doc\_id\}}). I use pdfplumber for layout-aware PDF extraction with PyPDF as a fallback, BeautifulSoup4 with lxml for HTML cleaning, and tenacity-backed exponential backoff for transient errors.
+  Each source tier has a dedicated crawler in \texttt{scripts/crawl/}. All crawlers respect \texttt{robots.txt}, enforce a configurable delay (\texttt{CRAWL\_DELAY\_SECONDS=1.5}), and identify themselves with a descriptive user-agent string. Raw content is stored in S3 under a structured prefix (\texttt{v1/raw/\{source\}/\{doc\_id\}}).
 
   \subsection{Parsing and Normalization}
-  Raw files pass through format-specific parsers that extract clean text, then through a normalization layer that assigns a canonical \texttt{doc\_id}, attaches metadata (source name, agency, jurisdiction, authority level, license note, URL), deduplicates by normalized text hash (removing approximately 600 near-duplicates), and chunks documents into 512-token windows with 64-token overlap using tiktoken (cl100k\_base encoding). The output is a 10,056-document corpus stored in \texttt{canonical\_corpus\_validated.jsonl}.
+  Raw files pass through format-specific parsers that extract clean text, then through a normalization layer that assigns a canonical \texttt{doc\_id}, attaches metadata, deduplicates, and chunks documents into 512-token windows with 64-token overlap. The output is a 10,056-document corpus stored in \texttt{canonical\_corpus\_validated.jsonl}.
 
   \subsection{Q\&A Generation via Amazon Bedrock}
-  I used Claude Sonnet 4.6 via Amazon Bedrock to generate structured Q\&A pairs from corpus chunks. Generation uses four prompt modes: FAQ mode for general immigration questions derived from policy text, Rule mode for rule-derived questions from regulatory text (8 CFR), Form mode for procedural questions from USCIS form instructions, and Precedent mode for case-law questions from BIA decisions. Each generated pair is returned as structured JSON with question, answer, answer type, source span, time sensitivity flag, and topic tags. A Pydantic validator enforces the schema; malformed responses trigger a retry up to three attempts. A background budget monitor polls AWS Cost Explorer every 30 minutes and raises an alert if account spend exceeds the configured budget limit.
+  I used Claude Sonnet 4.6 via Amazon Bedrock to generate structured Q\&A pairs from corpus chunks. Each generated pair includes question, answer, answer type, source span, time sensitivity flag, and topic tags.
 
   \subsection{Dataset Splitting}
-  I perform a stratified split by immigration subtopic: 16,065 pairs (94.2\%) for training and 993 pairs (5.8\%) for evaluation. Stratification ensures every subdomain is represented in the eval set proportional to its frequency in the full dataset.
+  I perform a stratified split by immigration subtopic: 16,065 pairs (94.2\%) for training and 993 pairs (5.8\%) for evaluation.
 
   \section{Fine-Tuning}
   \label{sec:finetuning}
 
   \subsection{Model Selection}
-  I selected Meta Llama 3.2 3B Instruct for three reasons. First, its 3B parameter count fits on a single A10G GPU (ml.g5.2xlarge, 24GB VRAM) with int8 quantization. Second, the Instruct variant supports the chat template format used in our dataset. Third, the Llama 3.2 license permits derivative model publication on HuggingFace.
-
-  \subsection{Training Data Format}
-  The SageMaker JumpStart training script expects the "dialog" format. I prepended a consistent system message to all 17,058 pairs before converting to this format.
+  I selected Meta Llama 3.2 3B Instruct because it fits on a single \texttt{ml.g5.2xlarge} instance with int8 quantization and supports the required chat format.
 
   \subsection{SageMaker JumpStart Configuration}
-  I used the SageMaker JumpStart API with \texttt{meta-textgeneration-llama-3-2-3b-instruct} (v2.7.0). The training job runs on a single \texttt{ml.g5.2xlarge} instance. Final hyperparameters:
-
-  \begin{lstlisting}[language=Python, caption={Final training hyperparameters.}, label={lst:hyperparams}]
-{
-  "chat_dataset": "True",
-  "instruction_tuned": "False",
-  "epoch": "1",
-  "learning_rate": "0.0001",
-  "lora_r": "8",
-  "lora_alpha": "32",
-  "lora_dropout": "0.05",
-  "target_modules": "q_proj,v_proj",
-  "per_device_train_batch_size": "1",
-  "per_device_eval_batch_size": "1",
-  "max_input_length": "512",
-  "int8_quantization": "True",
-  "merge_weights": "True",
-  "accept_eula": "true"
-}
-  \end{lstlisting}
-
-  \subsection{Infrastructure}
-  Training ran on a single ml.g5.2xlarge instance (1 NVIDIA A10G, 24 GB VRAM, 8 vCPU, 32 GB RAM) for approximately 1 hour 15 minutes across 16,065 examples at 1 epoch, costing roughly \$2 for the training job itself. Model output size was 6.43 GB (2 safetensors shards plus tokenizer and config).
-
-  \subsection{Model Export}
-  SageMaker stores model artifacts in S3 after training. I downloaded the artifacts, extracted them locally, and pushed to HuggingFace using huggingface\_hub.upload\_folder. The merged weights enable standard loading with AutoModelForCausalLM.from\_pretrained -- no PEFT adapter installation required.
-
-  \section{Results and Discussion}
-  \label{sec:results}
-
-  \subsection{Published Artifacts}
-  Both artifacts are live on HuggingFace:
-  \begin{itemize}
-    \item \textbf{Dataset:} \url{https://huggingface.co/datasets/nshportun/usa-immigration-law-qa}
-    \item \textbf{Model:} \url{https://huggingface.co/nshportun/usa-immigration-llama-3.2-3b-v3}
-  \end{itemize}
-
-  \subsection{Subdomain Coverage}
-  The 17,058 Q\&A pairs span 13 immigration subdomains, with the largest categories being family-based immigration (23.3\%), naturalization (15.6\%), asylum (12.3\%), and adjustment of status (10.1\%).
-
-  \subsection{Qualitative Observations}
-  The fine-tuned model shows noticeably better specificity than the base Llama 3.2 3B. It correctly identifies specific USCIS form numbers and their purposes, distinguishes between adjustment of status and consular processing, provides step-by-step procedural answers with correct filing sequences, and appropriately hedges on time-sensitive questions such as fees and processing times.
-
-  \paragraph{Limitations.}
-  The model may not reflect regulatory changes after the crawl date. It should not be used as a substitute for legal counsel. At 3B parameters with 512-token context, it cannot reason over long document chains.
+  Final hyperparameters include LoRA (\texttt{r=8}, \texttt{alpha=32}), \texttt{per\_device\_train\_batch\_size=1}, \texttt{max\_input\_length=512}, and \texttt{merge\_weights=True}.
 
   \subsection{Total Pipeline Cost}
   \begin{table}[ht]
@@ -159,39 +118,32 @@
     \label{tab:costs}
     \begin{tabular}{lr}
       \toprule
-      Component \& Cost \\
+      Component & Cost \\
       \midrule
-      Bedrock Claude QA generation (\$\sim\$17K pairs) \& \$\sim\$18 \\
-      SageMaker ml.g5.2xlarge training (\$\sim\$1.25 hrs) \& \$\sim\$2 \\
-      S3 storage (crawl + artifacts) \& \$\sim\$1 \\
+      Bedrock Claude QA generation ($\sim$17K pairs) & $\sim$\$18 \\
+      SageMaker ml.g5.2xlarge training ($\sim$1.25 hrs) & $\sim$\$2 \\
+      S3 storage (crawl + artifacts) & $\sim$\$1 \\
       \midrule
-      \textbf{Total} \& \textbf{\$\sim\$21} \\
+      \textbf{Total} & \textbf{$\sim$\$21} \\
       \bottomrule
     \end{tabular}
   \end{table}
 
-  \section{Engineering Lessons Learned}
-  \label{sec:lessons}
-  Several practical issues surfaced during development:
+  \section{Results and Discussion}
+  \label{sec:results}
+
+  \subsection{Published Artifacts}
   \begin{itemize}
-    \item \textbf{JumpStart hyperparameters:} \texttt{instruction\_tuned} and \texttt{chat\_dataset} are mutually exclusive.
-    \item \textbf{CUDA OOM on ml.g5.2xlarge:} Requires \texttt{int8\_quantization=True}, \texttt{per\_device\_train\_batch\_size=1}, and \texttt{max\_input\_length=512}.
-    \item \textbf{SageMaker Studio role:} The execution role must allow access to buckets with "sagemaker" in the name.
-    \item \textbf{GPU quota:} New AWS accounts require a Service Quotas increase for ml.g5.2xlarge.
-    \item \textbf{IAM PassRole:} Must explicitly list the SageMaker execution role ARN.
-    \item \textbf{Windows encoding:} Use \texttt{sys.stdout.buffer.write} for non-ASCII characters.
+    \item \textbf{Dataset:} \url{https://huggingface.co/datasets/nshportun/usa-immigration-law-qa}
+    \item \textbf{Model:} \url{https://huggingface.co/nshportun/usa-immigration-llama-3.2-3b-v3}
   \end{itemize}
 
-  \section{Reproducibility}
-  \label{sec:repro}
-  The complete pipeline is open-source at \url{https://github.com/nshportun/usa-immigration}. Estimated runtime: crawl approximately 4 hours, parse and normalize approximately 60 minutes, QA generation approximately 4 hours, fine-tuning approximately 1.25 hours, model export and HuggingFace upload approximately 60 minutes.
+  \subsection{Limitations}
+  The model may not reflect regulatory changes after the crawl date. It should not be used as a substitute for legal counsel.
 
   \section{Conclusion}
   \label{sec:conclusion}
-  A high-quality, source-grounded, fine-tuning-ready dataset for a specialized legal domain can be constructed end-to-end with commodity cloud tools for under \$25. The combination of Amazon Bedrock for structured data generation and SageMaker JumpStart for parameter-efficient fine-tuning makes this approach accessible to individual practitioners without large-scale infrastructure.
-
-  \paragraph{Future work.}
-  I plan to expand coverage to employment-based visa categories, add retrieval-augmented generation benchmarks, fine-tune the 8B variant, and incorporate BIA decision analysis for precedent-based Q\&A.
+  A high-quality, source-grounded dataset for a specialized legal domain can be constructed end-to-end with commodity cloud tools for under \$25.
 
   \appendix
   \section{Sample Q\&A Pairs}
@@ -200,29 +152,19 @@
   \paragraph{Family-based immigration -- form mode.}
   \textbf{Q:} What evidence must a U.S. citizen petitioner submit with Form I-130 to prove their relationship to a spouse born abroad?
 
-  \textbf{A:} A U.S. citizen petitioner must submit: (1) evidence of U.S. citizenship (passport, birth certificate, naturalization certificate, or Form N-560); (2) the marriage certificate; (3) proof that any prior marriages were legally terminated (divorce decrees or death certificates); and (4) passport-style photos of both the petitioner and beneficiary. If either party was previously married, evidence terminating all prior marriages is required for each prior marriage.
-
-  \paragraph{Asylum -- precedent mode.}
-  \textbf{Q:} Under Matter of A-B-, what must an asylum applicant demonstrate to establish membership in a particular social group based on domestic violence?
-
-  \textbf{A:} Under Matter of A-B-, 27 I\&N Dec. 316 (A.G. 2018), an asylum applicant claiming membership in a particular social group based on domestic violence must show the group is: (1) composed of members who share a common immutable characteristic; (2) defined with particularity; and (3) socially distinct within the society in question. General claims of being a ``victim of domestic violence'' or ``woman in a country with poor police protection'' are insufficient without evidence that the specific group is recognized as socially distinct by the relevant society.
-
-  \paragraph{Naturalization -- rule mode.}
-  \textbf{Q:} How does the continuous residence requirement work for naturalization applicants who have traveled abroad?
-
-  \textbf{A:} Applicants for naturalization must demonstrate continuous residence for at least 5 years (3 years if married to a U.S. citizen). A single absence of 6 months or more (but less than 1 year) creates a rebuttable presumption that continuous residence was broken. An absence of 1 year or more breaks continuous residence entirely, unless the applicant preserved residence by filing Form N-470 before the year-long absence and was employed by a qualifying U.S. employer or international organization abroad.
+  \textbf{A:} A U.S. citizen petitioner must submit: (1) evidence of U.S. citizenship; (2) the marriage certificate; (3) proof that any prior marriages were legally terminated; and (4) passport-style photos of both parties.
 
   \section*{References}
   \begin{thebibliography}{9}
 
     \bibitem[Guha et al.(2023)]{guha2023legalbench}
-    Guha, N., Nyarko, J., Ho, D., R\'e, C., Chilton, A., Chohlas-Wood, A., Peters, A., Waldon, B., Rockmore, D., Zambrano, D., Strisower, D., Zar, A., and Coyle, A. (2023). LegalBench: A Collaboratively Built Benchmark for Measuring Legal Reasoning in Large Language Models. \emph{arXiv preprint arXiv:2308.11462}.
+    Guha, N., Nyarko, J., Ho, D., R\'e, C., et al. (2023). LegalBench: A Collaboratively Built Benchmark for Measuring Legal Reasoning in Large Language Models. \emph{arXiv preprint arXiv:2308.11462}.
 
     \bibitem[Hu et al.(2022)]{hu2022lora}
-    Hu, E. J., Shen, Y., Wallis, P., Allen-Zhu, Z., Li, Y., Wang, S., Wang, L., and Chen, W. (2022). LoRA: Low-Rank Adaptation of Large Language Models. \emph{International Conference on Learning Representations (ICLR)}.
+    Hu, E. J., Shen, Y., Wallis, P., et al. (2022). LoRA: Low-Rank Adaptation of Large Language Models. \emph{International Conference on Learning Representations (ICLR)}.
 
     \bibitem[Meta(2024)]{meta2024llama32}
-    Meta AI. (2024). Introducing Llama 3.2: Advancing Vision and Small Models. \emph{Meta AI Blog}. Available at \url{https://ai.meta.com/blog/llama-3-2-connect-2024-vision-edge-mobile-devices/}.
+    Meta AI. (2024). Introducing Llama 3.2: Advancing Vision and Small Models. Available at \url{https://ai.meta.com/blog/llama-3-2-connect-2024-vision-edge-mobile-devices/}.
 
   \end{thebibliography}
 
