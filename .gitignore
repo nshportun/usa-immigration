@@ -20,7 +20,5 @@ reports/
 !metadata/source_registry.json
 !metadata/licenses.json
 CLAUDE.md
-CLAUDE.docx
-CLAUDEUPDATED.docx
 data_local/
 s3/
