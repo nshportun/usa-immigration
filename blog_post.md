@@ -1,6 +1,6 @@
 # Fine-Tuning Llama 3.2 for U.S. Immigration Law Q&A Using AWS SageMaker
 
-**Author:** nshportun  
+**Author:** Nazarii Shportun [nshportun]  
 **Date:** May 2026  
 **Preprint:** attached to [github.com/nshportun/usa-immigration](https://github.com/nshportun/usa-immigration)
 
@@ -70,7 +70,7 @@ The output is a 10,056-document corpus stored in `canonical_corpus_validated.jso
 
 ### 3.4 Q&A Generation via Amazon Bedrock
 
-I use Claude Sonnet 4.6 (via Amazon Bedrock, `us.anthropic.claude-sonnet-4-6`) to generate structured Q&A pairs from corpus chunks. Generation uses four prompt modes tailored to source type:
+I used Claude Sonnet 4.6 (via Amazon Bedrock, `us.anthropic.claude-sonnet-4-6`) to generate structured Q&A pairs from corpus chunks. Generation uses four prompt modes tailored to source type:
 
 **FAQ mode** — general immigration questions derived from policy text:
 ```
@@ -100,7 +100,7 @@ holding, the facts, and what the decision means for future cases.
 
 Each generated pair is returned as structured JSON with `question`, `answer`, `answer_type`, `source_span`, `time_sensitive`, and `topic_tags`. A Pydantic validator enforces the schema; malformed responses trigger a retry (up to 3 attempts).
 
-**Budget enforcement:** A background budget monitor polls AWS Cost Explorer every 30 minutes and raises `BudgetExceeded` if Account 1 spend exceeds `$BUDGET_LIMIT_USD`. The QA generation step uses Account 2 (separate budget).
+**Budget enforcement:** A background budget monitor polls AWS Cost Explorer every 30 minutes and raises `BudgetExceeded` if Account spend exceeds `$BUDGET_LIMIT_USD`.
 
 ### 3.5 Dataset Splitting
 
@@ -133,11 +133,11 @@ JumpStart's training script expects the "dialog" format:
 ]}
 ```
 
-I prepend a consistent system message to all 17,058 pairs before converting to this format.
+I prepended a consistent system message to all 17,058 pairs before converting to this format.
 
 ### 4.3 SageMaker JumpStart Configuration
 
-I use the SageMaker JumpStart API with `meta-textgeneration-llama-3-2-3b-instruct` (v2.7.0). The training job runs on a single `ml.g5.2xlarge` instance.
+I used the SageMaker JumpStart API with `meta-textgeneration-llama-3-2-3b-instruct` (v2.7.0). The training job runs on a single `ml.g5.2xlarge` instance.
 
 Final working hyperparameters (arrived at after 5 iteration cycles — see Section 6):
 
@@ -169,7 +169,7 @@ Final working hyperparameters (arrived at after 5 iteration cycles — see Secti
 
 ### 4.5 Model Export
 
-SageMaker stores model artifacts in S3 after training. I download the artifacts, extract them locally, and push to HuggingFace using `huggingface_hub.upload_folder`. The merged weights enable standard loading with `AutoModelForCausalLM.from_pretrained` — no PEFT adapter installation required.
+SageMaker stores model artifacts in S3 after training. I downloaded the artifacts, extracted them locally, and pushed to HuggingFace using `huggingface_hub.upload_folder`. The merged weights enable standard loading with `AutoModelForCausalLM.from_pretrained` — no PEFT adapter installation required.
 
 ---
 
@@ -183,7 +183,7 @@ Both artifacts are live on HuggingFace:
   - 2 configs: `qa` (train/eval) and `corpus`
   - Full provenance metadata on every pair
   
-- **Model:** [`nshportun/usa-immigration-llama-3.2-3b`](https://huggingface.co/nshportun/usa-immigration-llama-3.2-3b)
+- **Model:** [`nshportun/usa-immigration-llama-3.2-3b-v3`](https://huggingface.co/nshportun/usa-immigration-llama-3.2-3b-v3)
   - Llama 3.2 3B Instruct + LoRA, merged weights
   - Standard transformers loading
 
@@ -211,10 +211,10 @@ The fine-tuned model demonstrates improved specificity compared to the base Llam
 
 | Component | Cost |
 |-----------|------|
-| Bedrock Claude QA generation (~17K pairs) | ~$12–18 |
+| Bedrock Claude QA generation (~17K pairs) | ~$18 |
 | SageMaker ml.g5.2xlarge training (~1.25 hrs) | ~$2 |
 | S3 storage (crawl + artifacts) | ~$1 |
-| **Total** | **~$15–21** |
+| **Total** | **~$21** |
 
 This is remarkably low for a complete domain-adaptation pipeline. The primary cost driver is Bedrock QA generation, not compute.
 
@@ -230,7 +230,7 @@ Building this pipeline surfaced several non-obvious issues worth documenting for
 ```
 ValueError: At most one of the parameter instruction_tuned and chat_dataset can be True.
 ```
-I use `chat_dataset=True` for dialog-formatted data, and `instruction_tuned=True` only for flat instruction-response format.
+I used `chat_dataset=True` for dialog-formatted data, and `instruction_tuned=True` only for flat instruction-response format.
 
 ### 6.2 CUDA OOM on ml.g5.2xlarge
 
@@ -268,19 +268,19 @@ The complete pipeline is open-source at [github.com/nshportun/usa-immigration](h
 
 **Requirements:**
 - Python 3.11+
-- Two AWS accounts (or one with Bedrock + SageMaker access)
+- AWS account (with Bedrock + SageMaker access)
 - HuggingFace write token
 
 **Estimated runtime:**
-- Crawl: 2–4 hours (rate-limited, respectful crawling)
-- Parse + normalize: 30–60 minutes
-- QA generation: 2–4 hours (Bedrock throughput-limited)
+- Crawl: ~4 hours (rate-limited, respectful crawling)
+- Parse + normalize: ~60 minutes
+- QA generation: ~4 hours (Bedrock throughput-limited)
 - Fine-tuning: ~1.25 hours on ml.g5.2xlarge
-- Model export + HF upload: 30–60 minutes
+- Model export + HF upload: ~60 minutes
 
 **All artifacts are publicly accessible without re-running the pipeline:**
 - Dataset: `from datasets import load_dataset; ds = load_dataset("nshportun/usa-immigration-law-qa", "qa")`
-- Model: `from transformers import pipeline; pipe = pipeline("text-generation", model="nshportun/usa-immigration-llama-3.2-3b")`
+- Model: `from transformers import pipeline; pipe = pipeline("text-generation", model="nshportun/usa-immigration-llama-3.2-3b-v3")`
 
 ---
 
@@ -288,7 +288,7 @@ The complete pipeline is open-source at [github.com/nshportun/usa-immigration](h
 
 I have demonstrated that a high-quality, source-grounded, fine-tuning-ready dataset for a specialized legal domain can be constructed end-to-end with commodity cloud tools for under $25. The combination of Amazon Bedrock for structured data generation and SageMaker JumpStart for parameter-efficient fine-tuning makes this approach accessible to individual practitioners without large-scale infrastructure.
 
-The resulting dataset (`nshportun/usa-immigration-law-qa`) and model (`nshportun/usa-immigration-llama-3.2-3b`) are freely available and intended to accelerate research in immigration law AI, enable deployment of cost-efficient domain-specific assistants, and serve as a reproducible template for similar legal domain pipelines.
+The resulting dataset (`nshportun/usa-immigration-law-qa`) and model (`nshportun/usa-immigration-llama-3.2-3b-v3`) are freely available and intended to accelerate research in immigration law AI, enable deployment of cost-efficient domain-specific assistants, and serve as a reproducible template for similar legal domain pipelines.
 
 **Future work** includes: expanding to employment-based visa categories (NIW, EB-1, PERM), adding retrieval-augmented generation benchmarks against the corpus, fine-tuning the 8B variant for improved reasoning, and incorporating BIA decision analysis for precedent-based QA.
 
