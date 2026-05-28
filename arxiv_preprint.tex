@@ -5,13 +5,7 @@
 \usepackage{geometry}
 \geometry{a4paper, margin=1.05in}
 \usepackage{hyperref}
-\hypersetup{
-  colorlinks=true,
-  linkcolor=blue,
-  citecolor=blue,
-  urlcolor=blue,
-  breaklinks=true
-}
+\hypersetup{colorlinks=true,linkcolor=blue,citecolor=blue,urlcolor=blue,breaklinks=true}
 \usepackage{times}
 \usepackage{natbib}
 \usepackage{booktabs}
@@ -91,7 +85,7 @@ LoRA \citep{hu2022lora} injects trainable low-rank matrices into attention proje
 \subsection{Source Identification}
 \label{sec:sources}
 
-We assembled documents from 11 sources spanning four authority tiers (Table~\ref{tab:sources}). Primary official sources include materials produced directly by USCIS, DOJ, DHS, and Congress. Secondary reputable sources include open legal repositories such as the Pile of Law and the \texttt{harshitha008/US-immigration-laws} Hugging Face dataset. Community sources include Law StackExchange and VisaJourney forums; these are included for coverage of colloquial procedural questions but are labeled \texttt{community\_non\_authoritative}.
+We assembled documents from 11 sources spanning four authority tiers (Table~\ref{tab:sources}). Primary official sources include materials produced directly by USCIS, DOJ, DHS, and Congress. Secondary reputable sources include open legal repositories such as the Pile of Law and the \texttt{harshitha008/US\allowbreak-immigration\allowbreak-laws} Hugging Face dataset. Community sources include Law StackExchange and VisaJourney forums; these are included for coverage of colloquial procedural questions but are labeled \mbox{\texttt{community\_non\_authoritative}}.
 
 \begin{table}[ht]
   \centering
@@ -195,7 +189,7 @@ Each request passes a chunk of at most 6,000 characters to avoid exceeding Bedro
 
 \subsection{Schema and Metadata Enrichment}
 
-After generation, each raw output is parsed and enriched with: \texttt{qa\_id} (UUID), \texttt{source\_doc\_id}, \texttt{source\_url}, \texttt{authority\_level} (inherited from the parent document), \texttt{immigration\_subtopic} (from the chunk's subdomain label), \texttt{generation\_mode}, and a \texttt{time\_sensitive} flag set when the answer contains a year, fee amount, form number, or regulatory citation.
+After generation, each raw output is parsed and enriched with: \texttt{qa\_id} (UUID), \texttt{source\_doc\_id}, \texttt{source\_url}, \texttt{authority\_level} (inherited from the parent document), \texttt{immi\-gration\_sub\-topic} (from the chunk's subdomain label), \texttt{generation\_mode}, and a \texttt{time\_sensitive} flag set when the answer contains a year, fee amount, form number, or regulatory citation.
 
 \subsection{Validation and Filtering}
 
@@ -212,7 +206,7 @@ We perform a stratified split by immigration subtopic: 16,065 pairs (94.2\%) for
 
 \subsection{Model and Format}
 
-We fine-tune Meta Llama~3.2~3B Instruct (\texttt{meta-textgeneration-llama-3-2-3b-instruct}) using SageMaker JumpStart. Training examples are formatted in the Llama~3.1 chat template: each example is a two-turn conversation consisting of a user question and an assistant answer. No system prompt is prepended during training.
+We fine-tune Meta Llama~3.2~3B Instruct via the SageMaker JumpStart model ID \path{meta-textgeneration-llama-3-2-3b-instruct}. Training examples are formatted in the Llama~3.1 chat template: each example is a two-turn conversation consisting of a user question and an assistant answer. No system prompt is prepended during training.
 
 \subsection{Hyperparameters}
 
@@ -455,7 +449,7 @@ Source text:
 {text}
 \end{lstlisting}
 
-The \texttt{faq}, \texttt{form}, \texttt{precedent}, and \texttt{statistics} prompts follow the same structure with mode-specific focus instructions and answer-type vocabularies; full templates are in \texttt{scripts/qa\_generation/prompts.py} in the code repository.
+The \texttt{faq}, \texttt{form}, \texttt{precedent}, and \texttt{statistics} prompts follow the same structure with mode-specific focus instructions and answer-type vocabularies; full templates are in \path{scripts/qa_generation/prompts.py} in the code repository.
 
 \section{Sample Evaluation Examples}
 \label{app:samples}
