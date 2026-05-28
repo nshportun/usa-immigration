@@ -25,7 +25,7 @@ s3/
 
 # LaTeX build artifacts (keep .tex, .bib, and arxiv_submission.zip)
 arxiv_preprint.aux
-arxiv_preprint.bbl
+references.bbl
 arxiv_preprint.blg
 arxiv_preprint.log
 arxiv_preprint.out
