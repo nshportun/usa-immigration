@@ -22,6 +22,7 @@ reports/
 CLAUDE.md
 data_local/
 s3/
+.idea
 
 # LaTeX build artifacts (keep .tex, .bib, and arxiv_submission.zip)
 arxiv_preprint.aux
