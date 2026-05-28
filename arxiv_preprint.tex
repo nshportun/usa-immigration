@@ -49,9 +49,9 @@ U.S.\ immigration law is a procedurally dense domain with high practical stakes.
 
 General-purpose language models handle such queries poorly. They routinely confuse similar-sounding form numbers, misstate deadlines, and conflate procedural requirements across visa categories. The core difficulty is data: although official immigration guidance is publicly available, it is sparse in the pretraining corpora used by most LLMs relative to its procedural complexity.
 
-This paper addresses that gap with two contributions. First, we construct ImmigrationQA, a dataset of 17,058 source-grounded Q\&A pairs drawn from 11 official and community sources covering 13 immigration subdomains. Each pair is annotated with answer type, immigration subtopic, authority level, source provenance, and a time-sensitivity flag. Second, we fine-tune Llama~3.2~3B Instruct on ImmigrationQA using LoRA via AWS SageMaker~JumpStart and evaluate the result against the base model and a zero-shot strong-model baseline.
+This paper addresses that gap with two contributions. First, I construct ImmigrationQA, a dataset of 17,058 source-grounded Q\&A pairs drawn from 11 official and community sources covering 13 immigration subdomains. Each pair is annotated with answer type, immigration subtopic, authority level, source provenance, and a time-sensitivity flag. Second, I fine-tune Llama~3.2~3B Instruct on ImmigrationQA using LoRA via AWS SageMaker~JumpStart and evaluate the result against the base model and a zero-shot strong-model baseline.
 
-Our main findings are:
+The main findings are:
 \begin{enumerate}[nosep]
   \item A corpus of 10,056 canonical immigration documents can be assembled from public sources, chunked, and converted into structured QA pairs for under \$29 in cloud compute.
   \item Fine-tuning a 3B-parameter model on this data improves LLM-judged mean score from 0.85 to 1.08 (scale 0--3) relative to the same-family base model on a 101-example stratified eval.
@@ -71,13 +71,13 @@ Legal NLP has matured into a broad area spanning contract analysis, case law sum
 LEGAL-BERT \citep{chalkidis2020legalbert} demonstrated that pretraining on legal corpora substantially improves performance on legal classification tasks relative to general-domain BERT. More recently, LawInstruct \citep{zheng2023lawinstruct} released instruction-tuning data across multiple legal jurisdictions. Both efforts focus on case law and contracts; procedural immigration guidance---short FAQ-style answers grounded in official policy---is structurally different from the argumentative or analytical text that dominates those corpora. \citet{mahari2024legalsifter} show that retrieval-augmented architectures outperform purely parametric approaches on legal QA, a limitation that applies to the current work as well.
 
 \paragraph{Synthetic data generation for instruction tuning.}
-The Self-Instruct paradigm \citep{wei2022finetuned,ouyang2022instructgpt} uses a strong model to generate training data for a weaker one. Applied to legal domains, this requires careful source grounding to avoid hallucinated legal claims. We generate QA pairs from document chunks using mode-specific prompts, require that each answer trace to a source span, and reject pairs where the answer has no lexical overlap with the source span (Section~\ref{sec:generation}). This is a conservative but auditable filter for a high-stakes domain.
+The Self-Instruct paradigm \citep{wei2022finetuned,ouyang2022instructgpt} uses a strong model to generate training data for a weaker one. Applied to legal domains, this requires careful source grounding to avoid hallucinated legal claims. In this work, QA pairs are generated from document chunks using mode-specific prompts; each answer must trace to a source span, and pairs where the answer has no lexical overlap with the source span are rejected (Section~\ref{sec:generation}). This is a conservative but auditable filter for a high-stakes domain.
 
 \paragraph{Parameter-efficient fine-tuning.}
-LoRA \citep{hu2022lora} injects trainable low-rank matrices into attention projections, enabling domain adaptation with a small parameter budget. QLoRA \citep{dettmers2023qlora} extends this with 4-bit quantization of base weights. We use standard LoRA without quantization of the base weights, relying on SageMaker JumpStart's managed training environment for the Llama~3.2~3B checkpoint.
+LoRA \citep{hu2022lora} injects trainable low-rank matrices into attention projections, enabling domain adaptation with a small parameter budget. QLoRA \citep{dettmers2023qlora} extends this with 4-bit quantization of base weights. This work uses standard LoRA without quantization of the base weights, relying on SageMaker JumpStart's managed training environment for the Llama~3.2~3B checkpoint.
 
 \paragraph{LLM-as-judge evaluation.}
-\citet{zheng2023judging} established LLM-as-judge as a reliable proxy for human preference in open-ended generation evaluation. We adopt the same paradigm: a Claude~Sonnet model scores each prediction on a 0--3 rubric with written rationale, evaluated on a 101-example stratified sample drawn from the held-out split.
+\citet{zheng2023judging} established LLM-as-judge as a reliable proxy for human preference in open-ended generation evaluation. The same paradigm is adopted here: a Claude~Sonnet model scores each prediction on a 0--3 rubric with written rationale, evaluated on a 101-example stratified sample drawn from the held-out split.
 
 \section{Data Sources and Corpus Construction}
 \label{sec:corpus}
@@ -85,7 +85,7 @@ LoRA \citep{hu2022lora} injects trainable low-rank matrices into attention proje
 \subsection{Source Identification}
 \label{sec:sources}
 
-We assembled documents from 11 sources spanning four authority tiers (Table~\ref{tab:sources}). Primary official sources include materials produced directly by USCIS, DOJ, DHS, and Congress. Secondary reputable sources include open legal repositories such as the Pile of Law and the \texttt{harshitha008/US\allowbreak-immigration\allowbreak-laws} Hugging Face dataset. Community sources include Law StackExchange and VisaJourney forums; these are included for coverage of colloquial procedural questions but are labeled \mbox{\texttt{community\_non\_authoritative}}.
+Documents were assembled from 11 sources spanning four authority tiers (Table~\ref{tab:sources}). Primary official sources include materials produced directly by USCIS, DOJ, DHS, and Congress. Secondary reputable sources include open legal repositories such as the Pile of Law and the \texttt{harshitha008/US\allowbreak-immigration\allowbreak-laws} Hugging Face dataset. Community sources include Law StackExchange and VisaJourney forums; these are included for coverage of colloquial procedural questions but are labeled \mbox{\texttt{community\_non\_authoritative}}.
 
 \begin{table}[ht]
   \centering
@@ -110,7 +110,7 @@ We assembled documents from 11 sources spanning four authority tiers (Table~\ref
   \end{tabular}
 \end{table}
 
-The USCIS FAQ and myUSCIS help pages account for the majority of canonical documents (8,934 of 11,327 raw documents before corpus validation). After deduplication and validation, 10,056 documents enter the corpus. The 1,271 documents removed failed one validation filter: missing canonical URL, which we treat as a proxy for uncertain provenance.
+The USCIS FAQ and myUSCIS help pages account for the majority of canonical documents (8,934 of 11,327 raw documents before corpus validation). After deduplication and validation, 10,056 documents enter the corpus. The 1,271 documents removed failed one validation filter: missing canonical URL, which is treated as a proxy for uncertain provenance.
 
 \subsection{Crawling and Parsing}
 Each source has a dedicated crawler in \texttt{scripts/crawl/}. Crawlers respect \texttt{robots.txt}, enforce a 1.5-second request delay, and self-identify with a descriptive user-agent. Raw files (HTML, PDF, plain text) are stored in S3 under \texttt{v1/data\_raw/\{source\}/\{doc\_id\}}.
@@ -162,7 +162,7 @@ Answer types in the training split break down as: factual 66\%, eligibility 11\%
 
 \subsection{Generation Pipeline}
 
-QA pairs were generated from corpus chunks using Claude~Sonnet~4.6 via Amazon Bedrock. We defined five generation modes, each with a distinct prompt, matched to source type (Table~\ref{tab:modes}).
+QA pairs were generated from corpus chunks using Claude~Sonnet~4.6 via Amazon Bedrock. Five generation modes were defined, each with a distinct prompt matched to source type (Table~\ref{tab:modes}).
 
 \begin{table}[ht]
   \centering
@@ -193,7 +193,7 @@ After generation, each raw output is parsed and enriched with: \texttt{qa\_id} (
 
 \subsection{Validation and Filtering}
 
-We apply three rejection filters. First, answers shorter than 10 tokens are rejected (5 pairs removed). Second, pairs where the answer has no lexical token overlap with the \texttt{source\_span} are rejected as hallucination risks (22 pairs removed). Third, pairs flagged as \texttt{contradiction\_flagged} during LLM-assisted review pass through but carry a warning label; they are not removed because some contradictions reflect genuine ambiguity in the source rather than generation error.
+Three rejection filters are applied. First, answers shorter than 10 tokens are rejected (5 pairs removed). Second, pairs where the answer has no lexical token overlap with the \texttt{source\_span} are rejected as hallucination risks (22 pairs removed). Third, pairs flagged as \texttt{contradiction\_flagged} during LLM-assisted review pass through but carry a warning label; they are not removed because some contradictions reflect genuine ambiguity in the source rather than generation error.
 
 Of the 17,079 raw generated pairs, 17,057 pass validation and enter the dataset. The 22 hallucination-flagged rejections are concentrated in the \texttt{statistics} mode, where the model occasionally produced plausible-sounding but unsupported numbers.
 
@@ -206,7 +206,7 @@ We perform a stratified split by immigration subtopic: 16,065 pairs (94.2\%) for
 
 \subsection{Model and Format}
 
-We fine-tune Meta Llama~3.2~3B Instruct via the SageMaker JumpStart model ID \path{meta-textgeneration-llama-3-2-3b-instruct}. Training examples are formatted in the Llama~3.1 chat template: each example is a two-turn conversation consisting of a user question and an assistant answer. No system prompt is prepended during training.
+The fine-tuning targets Meta Llama~3.2~3B Instruct via the SageMaker JumpStart model ID \path{meta-textgeneration-llama-3-2-3b-instruct}. Training examples are formatted in the Llama~3.1 chat template: each example is a two-turn conversation consisting of a user question and an assistant answer. No system prompt is prepended during training.
 
 \subsection{Hyperparameters}
 
@@ -233,7 +233,7 @@ We fine-tune Meta Llama~3.2~3B Instruct via the SageMaker JumpStart model ID \pa
   \end{tabular}
 \end{table}
 
-We use \texttt{r=32} with \texttt{alpha=64} (the $2\times r$ convention), targeting all four attention projection matrices. This is a higher-capacity LoRA configuration than common defaults (\texttt{r=8}) to accommodate the breadth of immigration procedural vocabulary. A learning rate of 5e-5 was chosen conservatively to avoid catastrophic forgetting of the base model's instruction-following behavior. The LoRA adapters are merged into the base weights at export, producing a single deployable checkpoint.
+The configuration uses \texttt{r=32} with \texttt{alpha=64} (the $2\times r$ convention), targeting all four attention projection matrices. This is a higher-capacity LoRA configuration than common defaults (\texttt{r=8}) to accommodate the breadth of immigration procedural vocabulary. A learning rate of 5e-5 was chosen conservatively to avoid catastrophic forgetting of the base model's instruction-following behavior. The LoRA adapters are merged into the base weights at export, producing a single deployable checkpoint.
 
 \subsection{Cost}
 
@@ -261,10 +261,10 @@ The total compute cost was \$29, dominated by Bedrock token usage at \$18 for ap
 
 \subsection{Setup}
 
-We evaluate three systems on the same 101-example stratified sample drawn from the 993-pair held-out eval split:
+Three systems are evaluated on the same 101-example stratified sample drawn from the 993-pair held-out eval split:
 \begin{enumerate}[nosep]
   \item \textbf{Llama~3~8B (base, zero-shot)}: the Llama~3~8B Instruct base model prompted without fine-tuning.
-  \item \textbf{Llama~3.2~3B (fine-tuned, v3)}: our fine-tuned model.
+  \item \textbf{Llama~3.2~3B (fine-tuned, v3)}: the fine-tuned model produced by this work.
   \item \textbf{Claude~Sonnet~4.6 (zero-shot)}: a strong-model ceiling reference.
 \end{enumerate}
 
@@ -279,7 +279,7 @@ Each prediction is scored by Claude~Sonnet~4.6 acting as judge \citep{zheng2023j
   \item \textbf{1}: partially correct---some relevant facts, but significant gaps or errors.
   \item \textbf{0}: wrong---incorrect, irrelevant, or contradicts the reference.
 \end{itemize}
-The judge receives the question, the reference answer, and the prediction; it returns a score and a written rationale. We use the reference answers from the eval set as gold standards; these are source-grounded and were not generated by any model being evaluated.
+The judge receives the question, the reference answer, and the prediction; it returns a score and a written rationale. Reference answers from the eval set serve as gold standards; these are source-grounded and were not generated by any model being evaluated.
 
 \section{Results and Error Analysis}
 \label{sec:results}
@@ -381,7 +381,7 @@ A score-3 example illustrates where the model succeeds: concrete form-level proc
 
 \paragraph{Source-selection bias.} The corpus is weighted toward USCIS FAQ and myUSCIS help pages (88.9\% of raw canonical documents). These sources reflect USCIS's own framing of its procedures. They do not represent the perspective of immigration courts, noncitizens' advocates, or legal scholars who may characterize the same rules differently. Community sources (Law StackExchange, VisaJourney) were included for coverage but are not authoritative and may contain outdated or incorrect advice.
 
-\paragraph{Synthetic data quality.} QA pairs were generated by a Claude~Sonnet model. The system prompt prohibits hallucination, and we reject pairs without source-span overlap, but the validation filter is lexical, not semantic. A generated answer can be semantically unsupported by the source span while passing the token-overlap filter. The 22 rejections caught by this filter likely undercount lower-severity quality issues.
+\paragraph{Synthetic data quality.} QA pairs were generated by a Claude~Sonnet model. The system prompt prohibits hallucination, and pairs without source-span overlap are rejected, but the validation filter is lexical, not semantic. A generated answer can be semantically unsupported by the source span while passing the token-overlap filter. The 22 rejections caught by this filter likely undercount lower-severity quality issues.
 
 \paragraph{Evaluation scope.} The LLM-as-judge evaluation covers 101 of 993 held-out examples. The sample is stratified by subdomain but not by answer type or authority level. The judge model (Claude~Sonnet~4.6) is also the generation model for QA pairs, which may introduce systematic bias in which errors the judge detects.
 
