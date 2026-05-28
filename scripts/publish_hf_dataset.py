@@ -6,7 +6,7 @@ Uploads three splits:
   - eval   (~993 Q&A pairs, stratified)
   - corpus (10,056 canonical documents)
 
-Repo: nshportun/usa-immigration-law-qa
+Repo: set via HF_USERNAME/HF_DATASET_REPO env vars
 """
 
 import json
@@ -19,7 +19,7 @@ import structlog
 log = structlog.get_logger()
 
 HF_TOKEN = os.getenv("HF_TOKEN")
-HF_USERNAME = os.getenv("HF_USERNAME", "nshportun")
+HF_USERNAME = os.getenv("HF_USERNAME", "")
 DATASET_REPO = f"{HF_USERNAME}/usa-immigration-law-qa"
 
 BASE = pathlib.Path(__file__).resolve().parents[1]

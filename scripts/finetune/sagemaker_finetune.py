@@ -6,7 +6,7 @@ Steps:
 2. Launch SageMaker JumpStart fine-tuning job (Llama-3-2-3B-Instruct, LoRA)
 3. Wait for job completion
 4. Export model artifacts from S3
-5. Push to HuggingFace as nshportun/usa-immigration-llama-3.2-3b-v3
+5. Push to HuggingFace (repo set via HF_MODEL_REPO env var)
 
 Cost estimate: ~$10-20 on ml.g5.2xlarge (~2-3 hours for 16K examples, 2 epochs)
 
@@ -34,7 +34,7 @@ AWS_SECRET = os.getenv("AWS_SECRET_ACCESS_KEY")
 REGION     = os.getenv("SAGEMAKER_REGION", "us-west-2")   # JumpStart Llama available here
 
 # ── S3 ─────────────────────────────────────────────────────────────────────────
-S3_BUCKET  = os.getenv("SAGEMAKER_BUCKET", os.getenv("S3_BUCKET", "usa-immigration-finetune-2026"))
+S3_BUCKET  = os.getenv("SAGEMAKER_BUCKET", os.getenv("S3_BUCKET", ""))
 S3_FT_PREFIX = "v1/finetune"
 
 # ── SageMaker settings ─────────────────────────────────────────────────────────
@@ -53,7 +53,7 @@ JOB_NAME = f"usa-immigration-llama32-3b-{int(time.time())}"
 
 # ── HuggingFace ────────────────────────────────────────────────────────────────
 HF_TOKEN         = os.getenv("HF_TOKEN")
-HF_USERNAME      = os.getenv("HF_USERNAME", "nshportun")
+HF_USERNAME      = os.getenv("HF_USERNAME", "")
 HF_MODEL_REPO    = os.getenv("HF_MODEL_REPO", f"{HF_USERNAME}/usa-immigration-llama-3.2-3b-v3")
 
 

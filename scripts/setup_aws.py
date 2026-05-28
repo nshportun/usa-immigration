@@ -1,6 +1,6 @@
 """
 One-time AWS setup:
-  - Create S3 bucket usa-immigration-2026
+  - Create S3 bucket (name from S3_BUCKET env var)
   - Enable versioning
   - Create AWS Budget alert at $120 (warn) and $130 (hard stop via SNS)
   - Print confirmation

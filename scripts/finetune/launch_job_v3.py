@@ -1,15 +1,20 @@
 """
-Launch SageMaker JumpStart fine-tune for Llama 3.2 3B Instruct.
+Launch SageMaker JumpStart fine-tune for Llama 3.2 3B Instruct — v3 stable run.
+
+Changes vs v2 (which collapsed due to lr too high):
+  lora_r:        32  → 32       (unchanged — capacity was OK)
+  lora_alpha:    64  → 64       (unchanged)
+  target_modules: q_proj,v_proj,k_proj,o_proj  (unchanged — all attention)
+  epoch:          3  → 2        (slightly less aggressive)
+  learning_rate: 2e-4 → 5e-5   (4× lower — prevent catastrophic forgetting)
+  per_device_train_batch_size: 2 (unchanged)
+
+Root cause of v2 collapse: lr=2e-4 with 3 epochs on 4 attention modules
+caused catastrophic forgetting (model converged to generating '.' token).
 
 Uses JumpStartEstimator (handles EULA acceptance automatically).
-Tries ml.g5.2xlarge first; falls back to ml.g4dn.2xlarge if quota is exceeded.
 
-LoRA config: r=32, alpha=64, all attention projections, 2 epochs, lr=5e-5.
-
-Run: python scripts/finetune/launch_job.py
-
-After the job completes, export with:
-  SAGEMAKER_JOB_NAME=<job_name> python scripts/finetune/poll_and_export.py
+Run: python scripts/finetune/launch_job_v3.py
 """
 
 import boto3
@@ -34,7 +39,7 @@ ROLE_ARN  = os.getenv("SAGEMAKER_ROLE_ARN", "")
 
 HF_TOKEN      = os.getenv("HF_TOKEN")
 HF_USERNAME   = os.getenv("HF_USERNAME", "")
-HF_MODEL_REPO = os.getenv("HF_MODEL_REPO", f"{HF_USERNAME}/usa-immigration-llama-3.2-3b-v3")
+HF_MODEL_REPO = f"{HF_USERNAME}/usa-immigration-llama-3.2-3b-v3"
 
 JS_MODEL_ID = "meta-textgeneration-llama-3-2-3b-instruct"
 
@@ -59,10 +64,10 @@ def launch(sess: sagemaker.Session) -> str:
     if not ROLE_ARN:
         raise ValueError("SAGEMAKER_ROLE_ARN env var is required")
 
-    job_name = f"immigration-llama32-3b-{int(time.time())}"
+    job_name = f"immigration-llama32-3b-v3-{int(time.time())}"
 
     for instance_type in INSTANCE_PREFERENCE:
-        log.info("launching",
+        log.info("launching_v3",
                  job=job_name, instance=instance_type,
                  lora_r=32, lora_alpha=64, epochs=2, lr="5e-5",
                  target_modules="q_proj,v_proj,k_proj,o_proj")
@@ -79,18 +84,18 @@ def launch(sess: sagemaker.Session) -> str:
             estimator.set_hyperparameters(
                 chat_dataset="True",
                 chat_template="Llama3.1",
-                # ── LoRA ──────────────────────────────────────────────────────
+                # ── LoRA config (same as v2) ───────────────────────────────
                 lora_r="32",
                 lora_alpha="64",
                 lora_dropout="0.05",
                 target_modules="q_proj,v_proj,k_proj,o_proj",
-                # ── training ──────────────────────────────────────────────────
-                epoch="2",
-                learning_rate="0.00005",
+                # ── training schedule (conservative lr) ───────────────────
+                epoch="2",                                # was 3 in v2
+                learning_rate="0.00005",                  # was 0.0002 in v2 (4× lower)
                 per_device_train_batch_size="2",
                 per_device_eval_batch_size="2",
                 max_input_length="1024",
-                # ── output ────────────────────────────────────────────────────
+                # ── output ───────────────────────────────────────────────
                 merge_weights="True",
                 seed="42",
             )
@@ -132,7 +137,7 @@ def main():
     print(f"\nJob launched:  {job_name}")
     print(f"Monitor at:    {console}")
     print(f"\nAfter training completes (~2-3h), export with:")
-    print(f"  SAGEMAKER_JOB_NAME={job_name} python scripts/finetune/poll_and_export.py")
+    print(f"  SAGEMAKER_JOB_NAME={job_name} python scripts/finetune/poll_and_export_v3.py")
 
 
 if __name__ == "__main__":

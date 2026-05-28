@@ -22,7 +22,18 @@ reports/
 CLAUDE.md
 data_local/
 s3/
+.idea/
 .idea
+.vscode/
+*.iml
+
+# AWS / SageMaker artifacts
+*.tar.gz
+output/
+checkpoints/
+
+# Python notebooks
+.ipynb_checkpoints/
 
 # LaTeX build artifacts (keep .tex, .bib, and arxiv_submission.zip)
 arxiv_preprint.aux

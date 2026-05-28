@@ -18,7 +18,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 AWS_REGION       = os.getenv("AWS_DEFAULT_REGION", "us-east-1")
-S3_BUCKET        = os.getenv("S3_BUCKET", "usa-immigration-2026")
+S3_BUCKET        = os.getenv("S3_BUCKET", "")
 S3_PREFIX        = os.getenv("S3_PREFIX", "v1")
 BEDROCK_REGION   = os.getenv("BEDROCK_REGION", "us-east-1")
 BEDROCK_MODEL_ID = os.getenv("BEDROCK_MODEL_ID", "us.anthropic.claude-sonnet-4-6")
