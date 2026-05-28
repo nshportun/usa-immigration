@@ -1,7 +1,7 @@
 name: Require Owner Approval
 
 # Runs on every PR targeting main (or any branch).
-# Blocks the PR from being merged until natebell510 approves.
+# Blocks the PR from being merged until nshportun approves.
 # This is a status-check companion to CODEOWNERS + branch protection.
 
 on:
@@ -20,7 +20,7 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
-            const OWNER = 'natebell510';
+            const OWNER = 'nshportun';
             const { data: reviews } = await github.rest.pulls.listReviews({
               owner: context.repo.owner,
               repo: context.repo.repo,
