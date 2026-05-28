@@ -37,10 +37,12 @@ checkpoints/
 
 # LaTeX build artifacts (keep .tex, .bib, and arxiv_submission.zip)
 arxiv_preprint.aux
-references.bbl
+arxiv_preprint.bbl
 arxiv_preprint.blg
 arxiv_preprint.log
 arxiv_preprint.out
 arxiv_preprint.pdf
 arxiv_preprint.tex
 arxiv_submission.zip
+references.bbl
+references.bib
