@@ -13,7 +13,7 @@
 |----------|------|
 | Dataset | [`nshportun/usa-immigration-law-qa`](https://huggingface.co/datasets/nshportun/usa-immigration-law-qa) |
 | Model | [`nshportun/usa-immigration-llama-3.2-3b-v3`](https://huggingface.co/nshportun/usa-immigration-llama-3.2-3b-v3) |
-|arxiv.org|[`https://arxiv.org/submit/7615196/view`]|
+|arxiv.org|[`https://arxiv.org/submit/7615196/view`](https://arxiv.org/submit/7615196/view)|
 
 ---
 
